@@ -1,0 +1,289 @@
+---
+title: 'Activity 3: Summarizing Data'
+author: 'YOUR NAME'
+date: 'November 2, 2020'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # ignore unless you're an instructor and want to create a clean version for instructions
+```
+
+
+\
+
+**STOP AND DISCUSS**: Before you get going in R/RStudio, stop here to discuss and answer Question 1 with your group.
+
+\
+
+
+# Getting started
+
+1. Download `activity3.Rmd` and `introsurvey.csv` from Moodle and save them in a folder together on your computer that you can easily find again.  
+   
+2. Double check that the file you downloaded is called `activity3.Rmd`, not `activity3.Rmd.txt`.  
+    
+3. Open `activity3.Rmd` in RStudio: `File > Open File... >`.
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document called `activity3.html`.
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue. 
+
+
+
+# Part 1: loading R packages
+
+As was the case in Activity 2, throughout this activity we're going to be using some *functions* that live inside R *packages*. We already *installed* some of those packages last class, but we will still need to *load* all of those packages.
+
+1. Open the `Packages` panel (bottom right corner) to see the list of all packages that are already installed. Look to see if `stringr`,`readr`, `dplyr` and `ggplot2` are listed here. If they're on this list, that means they're already installed.
+
+2. If all four packages are already installed, skip to Step 3. If any packages are missing from this list, type `install.packages('packagename')` in the *Console* (bottom left corner) and hit Enter/Return.
+
+3. Load all packages by running the following code chunk (press the green "play" button in the top right corner of the code chunk). You should now see a check mark next to each of these packages in the `Packages` panel.
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+
+Remember that *installing* a package is like purchasing a book: we only need to **do it once** in order to get it on our bookshelf. *Loading* a package, on the other hand, is like taking a book off the bookshelf and opening it: we need to do this for **every R session** in which we want to use the functions in the package.
+
+
+
+# Part 2: loading the Introductions Survey data
+
+Now that we've installed and loaded all the packages that we need, we're ready to read our data into R. We'll be exploring your responses to the *Stat 155 Introductions Survey* that you completed on the first day of class.
+
+Read the data into R by running the following code chunk:
+
+```{r read-data}
+results <- read_csv('introsurvey.csv')
+```
+
+If you get an error message here, remember these tips:
+
+- read the error message to see if it gives you a hint about where the error occurred
+- check your spelling, capitalization, punctuation, and order of operations
+- make sure you've saved your .Rmd file
+- check that the data are stored in the same folder as this .Rmd file (or that you've correctly specified the entire path to the data file)
+- go back to Part 1 and make sure you loaded all necessary packages
+- access the help page for the function you're trying to run (type `?functionname` into the Console) and/or copy and paste the error message into Google
+
+If you've read in the data successfully, you should see a new data frame called `results` show up in the `Environment` panel (top right corner of your screen).
+
+
+
+# Part 3: exploring the Introductions Survey data
+
+Once your data are successfully loaded into R, look at the first six rows to remind yourself what the data look like: 
+
+```{r look-at-data}
+head(results)
+```
+
+
+
+# Part 4: summarizing data
+
+Now that you've read in our data and performed some basic exploration, you're ready to start summarizing!
+
+We use different techniques for summarizing data depending on the number and type of variables we're interested in studying. 
+
+
+## Majors
+
+The majors variable is *categorical*. We visualize the patterns in a categorical variable using a **bar plot**. 
+
+To create a bar plot, start with the code below. You should see a blank canvas.
+
+```{r barplot-step1}
+results %>%
+  ggplot(aes(x = `What is your declared or intended major? (undecided is a totally acceptable answer!)`))
+```
+
+
+Next, add a bar plot to the blank canvas. 
+
+```{r barplot-step2}
+results %>%
+  ggplot(aes(x = `What is your declared or intended major? (undecided is a totally acceptable answer!)`)) + 
+  geom_bar()
+```
+
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 2 with your group.
+
+
+You might have noticed above that our bar plot is currently treating some similar responses as separate categories (e.g., "math" and "Mathematics"). This is a common challenge with open response questions. Run the code below to clean up the majors variable and create a bar plot of the newly cleaned variable. Do you think this is an improvement over the first version? 
+
+```{r clean-majors-variable}
+# create a new "clean" version of the majors variable (change to lower case and take first 4 characters)
+results <- results %>%
+  mutate(clean_major = trimws(str_sub(str_to_lower(`What is your declared or intended major? (undecided is a totally acceptable answer!)`),1,4)))
+
+# plot the new clean major variable
+# and rotate the x-axis labels so they don't overlap
+results %>%
+  ggplot(aes(x = clean_major)) + 
+  geom_bar() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+
+
+```
+
+
+## Birthdays
+
+In Activity 2, you ran the code chunk below to count up how many people in our class will or will not be celebrating a birthday during Module 1.  
+
+```{r summarize-birthdays}
+results %>%
+  count(`When is your birthday?`)
+```
+
+Run the code below to create a bar plot of this variable:
+
+```{r visualize-birthdays}
+results %>%
+  ggplot(aes(x = `When is your birthday?`)) + 
+  geom_bar()
+```
+
+
+**STOP AND DISCUSS**: stop here to discuss and answer Questions 3 and 4 with your group.
+
+
+## Visualizing one quantitative variable
+
+Work with your group to pick one *quantitative* variable from this dataset that you would like to summarize. We can visualize the patterns in quantitative variables using **histograms** or **boxplots**.
+
+### Histograms
+
+Histograms are constructed by (1) dividing up the observed range of the variable into 'bins' of equal width; and (2) counting up the number of cases that fall into each bin.
+
+To create a histogram, start with the code below. Replace the question marks with the name of your variable. *If your variable has spaces or other special characters in its name, you'll need to put the name of the variable inside tick marks (e.g., `When is your birthday?`).*
+
+```{r histogram-step1}
+results %>%
+  ggplot(aes(x = ??))
+```
+
+Next, add a histogram to the blank canvas. As before, you'll need to replace the question marks with the name of your variable. 
+
+```{r histogram-step2}
+results %>% 
+  ggplot(aes(x = ??)) + 
+  geom_histogram()
+
+
+```
+
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 5 with your group.
+
+
+### Boxplots
+
+Another way to visualize quantitative data is to create a boxplot. For more details, read [Section 2.6.3](https://bcheggeseth.github.io/Stat155Notes/one-quantitative-variable.html#boxplot) in the *Stat 155 Notes*.
+
+Replace the question marks below with the name of your variable, then run the code to create a boxplot.
+
+```{r boxplot}
+results %>%
+  ggplot(aes(y = ??)) + 
+  geom_boxplot()
+```
+
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 6 with your group.
+
+
+### Multiple Boxplots
+
+Boxplots are very useful for comparing between groups. For more details, read [Section 2.7.2](https://bcheggeseth.github.io/Stat155Notes/one-quant-and-one-cat-variable.html#multiple-boxplots) in the *Stat 155 Notes*.
+
+Replace the question marks `??` below with the name of your quantitative variable, then run the code to create multiple boxplots.
+
+```{r multiple-boxplots}
+results %>%
+  filter(`What is your expected graduation year?` > 2020) %>% #removing instructor's responses :)
+  ggplot(aes(x = factor(`What is your expected graduation year?`), 
+             y = ??)) + 
+  geom_boxplot()
+```
+
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 7 with your group.
+
+
+
+# Part 5: Challenge!
+
+Skip to the **Last step** section, below, if you don't have time to look at these challenge questions.
+
+
+a. Adjust the code above to try create histograms of your chosen quantitative variable using different bin widths. What impact does it have on the visualization? What are the trade-offs in using small vs large bins? (Hint: try adding `binwidth = 0.5`, `binwidth = 50`, ... inside the `geom_histogram()` command.)
+
+```{r histogram-change-bins, warning = FALSE, message = F}
+## histogram with smaller bins
+
+## histogram with larger bins
+
+```
+
+> REPLACE THIS TEXT WITH YOUR ANSWER
+
+
+
+b. Another type of plot that's useful for summarizing quantitative variables is a **density plot**. Density plots are essentially smooth versions of histograms. Create a density plot for your chosen quantitative variable by using the code below. How does this compare to the histograms you made above? Which do you prefer? Why?
+
+
+```{r density, warning = FALSE, message = F}
+results %>%
+  ggplot(aes(x = ??)) +  #change ?? to your variable name
+  geom_density()
+```
+
+> REPLACE THIS TEXT WITH YOUR ANSWER
+
+
+
+c. For the histogram below, add a title and more meaningful axis labels. Change the x- and y-axis labels on one of your plots. *Hint: do a Google search for something like "add axis labels ggplot".*
+
+```{r add-title-and-axis-labels, warning = FALSE, message = F}
+results %>%
+  ggplot(aes(x = ??)) +  #change ?? to your variable name
+  geom_histogram() # + add title & axis labels
+```
+
+
+d. Adjust the bar plot code below to color the histogram bars green. NOTE: color can be an effective tool... is it effective here?
+
+```{r change-color}
+# Make the bars green
+results %>%
+  ggplot(aes(x = ??)) + #change ?? to your variable name
+  geom_histogram() #add color 
+```   
+
+> REPLACE THIS TEXT WITH YOUR ANSWER
+
+e. Check out the Data Visualization [cheat sheet](https://rstudio.com/resources/cheatsheets/) or work through this RStudio primer on how to [Visualize Data](https://rstudio.cloud/learn/primers/3)
+
+
+
+# Last step
+
+Click `Knit` one last time and convert the `.html` file into a PDF by following these steps: 
+
+- `Knit > Open in Browser > Print > Save as PDF` (Windows,Mac-Chrome)
+- `Knit > Open in Browser > Export as PDF` (Mac-Safari). 
+
+**Don't forget to check for error messages or formatting issues in your HTML/PDF file!** 

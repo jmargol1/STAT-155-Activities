@@ -1,0 +1,254 @@
+---
+title: "Activity 11: Parallel and Non-Parallel Lines"
+author: "Your Name"
+date: "November 17, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+# knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity11.Rmd` and `housing.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+
+    - I **strongly** recommend that you save this file in a new folder dedicated to activities for this class, *not in your Downloads*.
+    - Double check that the file you downloaded does not have an extra `.txt` at the end of its name. 
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity11.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+
+# Loading Packages and Data
+
+## Loading packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(broom)
+```
+
+
+## Data context
+
+This data in `housing.csv` describe the sale of individual residential properties in Ames, Iowa from 2006 to 2010. The data set contains 2930 observations and a large number of both categorical and quantitative variables involved in assessing home values. 
+
+We will focus on three of these variables today:
+
+- `SalePrice`: the sale price, in U.S. dollars
+- `GrLivArea`: above grade (ground) living area, in square feet
+- `OverallQual`: the overall material and finish quality (1-poor, 10-high)
+
+
+## Loading the housing data
+
+Download `housing.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-housing-data}
+housing <- read_csv('housing.csv')
+```
+
+
+Look at the first six rows and/or type `View(housing)` in the Console to remind yourself what the data look like.
+
+```{r look-at-housing-data}
+head(housing)
+```
+
+
+
+
+# Part 1: Model with one predictor variable
+
+In Activity 9, we looked at the relationship between sale prices (`SalePrice`), above-ground living area (`GrLivArea`), and the overall quality (`OverallQual`) of homes in Ames, Iowa. Before adding `OverallQual` to our visualization and model, we turned it into a categorical variable with 4 categories (1-3, 4-5, 6-7, 8-10) using the `cut` function. Today, we're going to continue thinking about the relationship between these three variables, but we're going to use a slightly different version of the quality variable. 
+
+
+## Create new categorical variable
+
+Run the code chunk below to create a new `QualCat` categorical variable, this time with 3 categories named "low-quality" (overall quality between 1 and 3), "mid-quality" (overall quality between 4 and 7), and "high-quality" (overall quality between 8 and 10). 
+
+```{r create-qualcat}
+housing <- housing %>%
+  filter(GrLivArea < 3000) %>%
+  mutate(QualCat = relevel(factor(case_when(
+    OverallQual %in% c(1, 2, 3) ~ "low-quality",
+    OverallQual %in% c(4, 5, 6, 7) ~ "mid-quality",
+    OverallQual %in% c(8, 9, 10) ~ "high-quality")),
+    ref="low-quality"))
+```
+
+Type `View(housing)` in the Console to look at the data set, which should now have a new categorical variable called `QualCat`. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 1 with your group. 
+
+
+## Fit mod1 (SalePrice ~ QualCat)
+
+Now, let's fit a linear regression model that models the average sale price as a function of home quality. We'll save this model as `mod1` so we can refer back to it later.
+
+```{r mod1}
+# fit model and save as mod1
+mod1 <- housing %>%
+  with(lm(SalePrice ~ QualCat))
+
+# print out coefficients for mod1
+mod1 %>%
+  coef()
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 2 with your group. 
+
+
+
+
+# Part 2: Model with two predictor variables
+
+Besides home quality, we might also expect that the size of a house plays a big role in its sale price. Let's add `GrLivArea` to our model, like we did in Activity 9.
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 3 with your group. 
+
+
+## Fit mod2 (SalePrice ~ QualCat + GrLivArea)
+
+```{r mod2}
+# fit model and save as mod2
+mod2 <- housing %>%
+  with(lm(SalePrice ~ QualCat + GrLivArea))
+
+# print out coefficients for mod2
+mod2 %>%
+  coef()
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 4 & 5 with your group. 
+
+
+## Visualize mod2
+
+To visualize `mod2`, we start by creating a scatterplot of our two quantitative variables (`GrLivArea` vs `SalePrice`) and coloring the points according to our categorical variable (`QualCat`). 
+
+Then, we add three lines to this plot, one for each category of home quality, that describe the relationship between living area and sale price holding home quality constant. The intercepts and slopes for these lines come from `mod2`. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 6 with your group. 
+
+Now that you've figured out the slope and intercept for these three lines, we can create our plot. Before you run the code chunk below, you will need to replace the placeholders `iHIGH`, `sHIGH`, `iLOW`, `sLOW`, `iMID`, and `sMID` with the actual numbers for the intercepts and slopes for these lines.
+
+```{r plot-mod2}
+# scatterplot with three lines
+housing %>%
+  ggplot(aes(color = QualCat, y = SalePrice, x = GrLivArea)) + 
+  geom_point() + 
+  theme_classic() + 
+  scale_color_viridis_d('Overall Quality') + 
+  xlim(0, 3000) +
+  geom_abline(intercept = iHIGH, slope = sHIGH, color = '#238A8DFF') + # high quality homes
+  geom_abline(intercept = iLOW, slope = sLOW, color = '#440154FF') + # low quality homes
+  geom_abline(intercept = iMID, slope = sMID, color = '#FDE725FF') # mid quality homes
+```
+
+You can also plot the fitted values as lines, `geom_line()`, as long as you tell `ggplot` how to separate the values into lines by proving a `group` aesthetic mapping to the categorical variable, `QualCat`. This is the lazy way to make the plot above. : )
+
+```{r plot-fitted-mod2}
+# scatterplot with three lines
+augment(mod2) %>%
+  ggplot(aes(color = QualCat, y = SalePrice, x = GrLivArea)) + 
+  geom_point(alpha = 0.2, size = .5) +
+  geom_line(aes(y = .fitted, group = QualCat), size = 1.5) + 
+  theme_classic() + 
+  scale_color_viridis_d('Overall Quality') + 
+  xlim(0, 3000)
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 with your group. 
+
+
+
+# Part 3: Model with interaction between two predictor variables
+
+Models like `mod2` are sometimes called *parallel line* models. You might have noticed in your visualization, above, that the three lines (describing the relationship between living area and sale price among high, mid, and low-quality homes) were all parallel. To create a model with *non-parallel line*, we can add an *interaction* between our two predictor variables. 
+
+## Fit mod3 (SalePrice ~ QualCat * GrLivArea)
+
+Run the code chunk below to fit this new model and print out the coefficient estimates.
+
+```{r mod3}
+# fit model and save as mod3
+mod3 <- housing %>%
+  with(lm(SalePrice ~ QualCat * GrLivArea))
+
+# print out coefficients for mod3
+mod3 %>%
+  coef()
+
+#when you see :, think multiplication
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 8 & 9 with your group. 
+
+
+
+## Visualize mod3
+
+To visualize `mod3`, we'll do something similar to what we did with `mod2`, above. 
+
+We start by creating a scatterplot of our two quantitative variables (`GrLivArea` vs `SalePrice`) and coloring the points according to our categorical variable (`QualCat`). Then, we add three lines to this plot, one for each category of home quality, that describe the relationship between living area and sale price holding home quality constant. The intercepts and slopes for these lines come from `mod3`. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 10 with your group. 
+
+Once you've figured out the slope and intercept for these three lines, we can create our plot. Before you run the code chunk below, you will need to replace the placeholders `iHIGH`, `sHIGH`, `iLOW`, `sLOW`, `iMID`, and `sMID` with the actual numbers for the intercepts and slopes for these lines.
+
+```{r plot-mod3}
+# scatterplot with three non-parallel lines
+housing %>%
+  ggplot(aes(color = QualCat, y = SalePrice, x = GrLivArea)) + 
+  geom_point() + 
+  theme_classic() + 
+  scale_color_viridis_d('Overall Quality') + 
+  xlim(0, 3000) +
+  geom_abline(intercept = iHIGH, slope = sHIGH, color = '#238A8DFF') + # high quality homes
+  geom_abline(intercept = iLOW, slope = sLOW, color = '#440154FF') + # low quality homes
+  geom_abline(intercept = iMID, slope = sMID, color = '#FDE725FF') # mid quality homes
+```
+
+```{r plot-fitted-mod3}
+# scatterplot with three lines
+augment(mod3) %>%
+  ggplot(aes(color = QualCat, y = SalePrice, x = GrLivArea)) + 
+  geom_point(alpha = 0.2, size = .5) +
+  geom_line(aes(y = .fitted, group = QualCat), size = 1.5) + 
+  theme_classic() + 
+  scale_color_viridis_d('Overall Quality') + 
+  xlim(0, 3000)
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer the remaining questions with your group. 
+
+
+```{r further-analysis}
+#use this R chunk to do further analysis to help you answer Q12
+
+
+```

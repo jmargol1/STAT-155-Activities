@@ -1,0 +1,343 @@
+---
+title: 'Activity 5: Correlation and Linear Regression'
+author: "YOUR NAME"
+date: "November 5, 2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity5.Rmd` and `fev.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+
+    - I **strongly** recommend that you save this file in a new folder dedicated to activities for this class, *not in your Downloads*.
+    - Double check that the file you downloaded is called `activity5.Rmd`, not `activity5.Rmd.txt`. 
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity5.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document called `activity5.html`. Notice that this has also created a new file called `activity5.html` in the folder where you had originally saved `activity5.Rmd`. 
+
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue. 
+
+
+
+
+# Part 1: Load Packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+# load packages
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+
+
+# Part 2: Exploring Correlation
+
+In this part, we're going to be exploring [correlation](https://bcheggeseth.github.io/Stat155Notes/two-quantitative-variables.html#correlation-coefficient) in a small "toy" dataset.
+
+Run the code below to create a data frame with two variables, named `x` and `y`. 
+
+```{r create-toy-data}
+x <- seq(1,10)
+y <- seq(2,20,by=2)
+dat <- data.frame(x = x, y = y)
+```
+
+View this dataset by typing `View(dat)` in the *Console*, or by finding and clicking on `dat` in the *Environment* pane.
+
+
+1. On paper, sketch what the scatterplot looks like. (You don't need to include your sketch here.)
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 1 with your group.
+
+
+
+2. Run the code below, which calculates the mean (`mean(x), mean(y)`) and standard deviation (`sd(x), sd(y)`) of both variables and adds them as new variables (called `xbar`, `ybar`, `sx`, and `sy`) to the data set. 
+
+```{r add-summaries-to-data}
+# create new mean and sd variables
+dat <- dat %>%
+  mutate(xbar = mean(x), ybar = mean(y), sx = sd(x), sy = sd(y))
+median(x)
+```
+
+View the dataset again by typing `View(dat)` in the *Console*, or by finding and clicking on `dat` in the *Environment* pane, to look at the four new variables you just added to your dataset.
+
+
+
+3. Replace the `?` in the code below with code that uses the means and standard deviations to find the z-scores for both variables and save them as `zx` and `zy`. (*Hint:* think about [the formula for a z-score](https://bcheggeseth.github.io/Stat155Notes/one-quantitative-variable.html#z-scores). How could you calculate a z-score using the variables---`x`, `y`, `xbar`, `ybar`, `sx`, `sy`---that already exist in this dataset?)
+
+```{r add-zscores-to-data}
+# create new zscore variables
+dat <- dat %>% 
+  mutate(zx = (x - xbar)/sx, zy = (y - ybar)/sy)
+```
+
+View the dataset again by typing `View(dat)` in the *Console*, or by finding and clicking on `dat` in the *Environment* pane, to look at the two new variables you just added to your dataset.
+
+
+
+4. Run the code below, which multiplies `zx` and `zy`, and then looks at a histogram of the products. 
+
+```{r create-products}
+# multiply zx and zy
+dat <- dat %>%
+  mutate(prod = zx*zy)
+
+# look at histogram of zx * zy
+dat %>%
+  ggplot(aes(x = prod)) +
+  geom_histogram(binwidth = 0.5) +
+  theme_minimal()
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 2 with your group.
+
+
+
+5. Now, run this code to add up all the z-score products and divide by the number of values minus 1. (This is almost like finding the average of all the products.) How does this value compare to the correlation coefficient value you guessed in Q1?
+
+```{r calc-cor}
+# calculate correlation by hand
+dat %>%
+  summarize(cor = sum(prod)/(length(prod) - 1))
+
+# calculate correlation using the cor function
+dat %>%
+  summarize(cor = cor(x,y))
+```
+
+
+
+
+6. Let's repeat the same process with a larger data set. Run the code below to create two variables, named x and y, and create a scatterplot. 
+
+```{r generate-data}
+# create a bigger dataset
+# note that the "r" in "rnorm" stands for "random" -- so your data will all be slightly different
+x <- rnorm(100, mean = 5, sd = 2)
+y <- -3*x + rnorm(100, sd = 4)
+dat.xy <- data.frame(x = x, y = y)
+
+# make a scatterplot
+dat.xy %>%
+  ggplot(aes(x = x, y = y)) + 
+  geom_point() +
+  theme_minimal()
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 3 with your group.
+
+
+
+7. Let's calculate the correlation for this bigger dataset by hand, using the same steps as above. Copy and paste code from above to 1) find the z-scores for both variables, named `zx` and `zy`, 2) find the product of the z-scores, 3) make a histogram of the product of z-scores, and 4) calculate the almost average (sum/(n-1)) of the product of z-scores. How close was your guess to the real value? How does this compare to the value from `cor(x,y)` in the 2nd chunk below?  
+
+```{r copy-steps-above}
+x <- seq(1,10)
+y <- seq(2,20,by=2)
+dat <- data.frame(x = x, y = y)
+
+dat <- dat %>%
+  mutate(xbar = mean(x), ybar = mean(y), sx = sd(x), sy = sd(y))
+median(x)
+
+dat <- dat %>% 
+  mutate(zx = (x - xbar)/sx, zy = (y - ybar)/sy)
+
+# multiply zx and zy
+dat <- dat %>%
+  mutate(prod = zx*zy)
+
+# look at histogram of zx * zy
+dat %>%
+  ggplot(aes(x = prod)) +
+  geom_histogram(binwidth = 0.5) +
+  theme_minimal()
+
+# calculate correlation by hand
+dat %>%
+  summarize(cor = sum(prod)/(length(prod) - 1))
+
+# calculate correlation using the cor function
+dat %>%
+  summarize(cor = cor(x,y))
+
+# create a bigger dataset
+# note that the "r" in "rnorm" stands for "random" -- so your data will all be slightly different
+x <- rnorm(100, mean = 5, sd = 2)
+y <- -3*x + rnorm(100, sd = 4)
+dat.xy <- data.frame(x = x, y = y)
+
+# make a scatterplot
+dat.xy %>%
+  ggplot(aes(x = x, y = y)) + 
+  geom_point() +
+  theme_minimal()
+```
+
+```{r check-answer}
+dat.xy %>%
+  summarize(cor = cor(x,y))
+```
+
+
+
+8. Add an outlier to the data generated above (replace `NEWPOINTx` and `NEWPOINTy` with numbers), create a new scatterplot, and re-calculate the correlation. Try changing the values of `NEWPOINTx` and `NEWPOINTy` to get a sense of when and how an outlier changes the correlation. 
+
+```{r influence-of-outliers}
+# add an outlier
+x1 <- c(x, 253)
+y1 <- c(y, 253)
+dat.xy1 <- data.frame(x = x1, y = y1)
+
+# create a scatterplot
+dat.xy1 %>%
+  ggplot(aes(x = x, y = y)) + 
+  geom_point()
+
+# calculate correlation
+dat.xy1 %>%
+  summarize(cor = cor(x,y))
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 4 with your group.
+
+
+
+
+# Part 3: Introducing the FEV Data
+
+Forced expiratory volume (FEV) is a measure of lung capacity. Higher values indicate higher lung capacity---the ability to blow out more air in one second---and therefore indicate better lung function. For the rest of this activity, you'll use R to examine the relationship between FEV, height, and age in children. 
+
+Data are available for a total of 654 children, ages 3-19. Each row in the dataset corresponds to a single child's visit to a doctor's clinic. Variables collected include `age` (years), `fev` (liters per second), `height` (inches), binary `sex` (male/female), and an indicator `smoke` of whether the child smokes (smoker/nonsmoker).
+
+Download `fev.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-fev-data}
+fev <- read_csv('fev.csv')
+```
+
+
+Look at the first six rows (and/or type `View(fev)` in the Console) to familiarize yourself with these data.
+
+```{r look-at-fev-data}
+head(fev)
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 5 with your group. 
+
+
+
+
+# Part 4: Correlation in the FEV Data
+
+Run the code below to create a scatterplot showing the relationship between FEV and height.
+
+```{r scatterplot-height-vs-fev}
+fev %>%
+  ggplot(aes(x = height, y = fev)) + 
+  geom_point() + 
+  theme_minimal() #this removes gray background 
+```
+
+
+Then, type in code below to create a scatterplot showing the relationship between FEV and age.
+
+```{r scatterplot-age-vs-fev}
+fev %>%
+  ggplot(aes(x = age, y = fev)) + 
+  geom_point() + 
+  theme_minimal() #this removes gray background 
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 6 with your group. 
+
+
+Now, run the code below to calculate the correlation between these variables using the `cor` function. How close were your guesses?
+
+```{r correlation-fev}
+fev %>%
+  summarize(cor(fev, height), cor(fev, age))
+```
+
+
+
+
+# Part 5: Linear Regression in the FEV Data
+
+Run the code below to add the line of best fit (i.e., the linear regression line) to your scatterplot of height vs FEV. 
+
+```{r line-height-vs-fev}
+fev %>%
+  ggplot(aes(x = height, y = fev)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + # this part adds the line
+  xlim(c(0,75)) + ylim(c(-10,6)) + #this changes the minimum and maximum values (the limits) on the x and y axes
+  theme_minimal()
+```
+
+
+Then, type in code below to do the same for the scatterplot of FEV vs age.
+
+```{r line-age-vs-fev}
+fev %>%
+  ggplot(aes(x = age, y = fev)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + # this part adds the line
+  xlim(c(0,75)) + ylim(c(-10,6)) + #this changes the minimum and maximum values (the limits) on the x and y axes
+  theme_minimal()
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 with your group. 
+
+
+Now, run the code below to fit these linear regression models using the `lm` function and print out the estimated intercepts and slopes. How close were your guesses?
+
+```{r lm-fev}
+# linear model: FEV vs height
+fev %>%
+  with(lm(fev ~ height))
+
+# linear model: FEV vs age
+fev %>%
+  with(lm(fev ~ age))
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer the remaining questions with your group. 
+
+Reminder: to look at the data in a spreadsheet format, type `View(fev)` in the Console.
+
+
+
+# Wrapping Up
+
+At the end of class (or after you've finished working through the questions above, whichever comes first), turn this .Rmd file into a nicely formatted .pdf as practice for your weekly assignments. To do this, follow these steps: `Knit` (to HTML) > `Open in Browser` > `Print` > `Save as PDF`. 
+
+
+

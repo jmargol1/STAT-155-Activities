@@ -1,0 +1,227 @@
+---
+title: "Activity 6: Fitting and Interpreting Linear Regression Models"
+author: "YOUR NAME"
+date: "November 9, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+# knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity6.Rmd` and `fev.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+
+    - I **strongly** recommend that you save this file in a new folder dedicated to activities for this class, *not in your Downloads*.
+    - Double check that the file you downloaded is called `activity6.Rmd`, not `activity6.Rmd.txt`. 
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity6.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document called `activity6.html`. Notice that this has also created a new file called `activity6.html` in the folder where you had originally saved `activity6.Rmd`. 
+
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue. 
+
+
+
+
+# Part 1: Load Packages
+
+As always, we start by loading all the packages that we'll need. 
+
+We are going to use one new package today, so before you run the code chunk below, you should first type `install.packages('GGally')` in the Console.
+
+```{r load-packages}
+# load packages
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(GGally)
+```
+
+
+
+
+# Part 2: Loading and Summarizing the FEV Data
+
+We will use the FEV data from Activity 5 again today.
+
+## Data context
+
+Forced expiratory volume (FEV) is a measure of lung capacity. Higher values indicate higher lung capacity---the ability to blow out more air in one second---and therefore indicate better lung function. For the rest of this activity, you'll use R to examine the relationship between FEV, height, and age in children. 
+
+Data are available for a total of 654 children, ages 3-19. Each row in the dataset corresponds to a single child's visit to a doctor's clinic. All children participating in this study attended the same pediatric clinic. The exact date of the study is unknown, but we at least know that it took place before 2005. Variables collected include:
+
+- `age` at time of measurement (years)  
+- measured forced expiratory volume `fev` (liters per second)  
+- `height` at time of measurement (inches)  
+- binary `sex` (male/female)  
+- indicator of smoking habits `smoke` (smoker/nonsmoker)  
+
+
+## Loading the data
+
+Download `fev.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-fev-data}
+fev <- read_csv('fev.csv')
+```
+
+
+Look at the first six rows (and/or type `View(fev)` in the Console) to familiarize yourself with these data.
+
+```{r look-at-fev-data}
+head(fev)
+```
+
+
+## Summarizing the data
+
+If you'd like to look at pair-wise scatterplots between a small set of quantitative variables (fewer than 5 variables), you can create a scatterplot matrix. Along the diagonal, you see a density plot (smoothed histogram) for each variable. On the upper right, you have the correlation coefficients (r) calculated for each pair of variables (look at the column and row variable labels). On the lower left, you have scatterplots. 
+
+Let's use the `ggpairs` function to make a scatterplot matrix for the three quantitative vaiables in this dataset: `height`, `age`, and `fev`. Run the code below.
+
+- In the first column (corresponding to `height` on the x-axis) and second row (corresponding to `age` on the y-axis), we have the scatterplot of `x = height` and `y = age`. 
+- In the first column (corresponding to `height` on the x-axis) and third row (corresponding to `fev` on the y-axis), we have the scatterplot of `x = height` and `y = fev`. 
+- In the second column (corresponding to `age` on the x-axis) and third row (corresponding to `fev` on the y-axis), we have the scatterplot of `x = age` and `y = fev`. 
+
+```{r scatterplot-matrix}
+fev %>% 
+  select(height,age,fev) %>%
+  ggpairs() + 
+  theme_minimal()
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 1 & 2 with your group. 
+
+
+
+
+# Part 3: Modeling FEV
+
+## FEV vs. height
+
+In the last activity, you fit a linear model for the expected FEV based on height of a child,
+
+$$E[ FEV | height ] = \beta_0 + \beta_1 height$$
+
+Using the data, you looked at the correlation between FEV and height and obtained estimates for the intercept ($\hat{\beta}_0$) and slope ($\hat{\beta}_1$):
+
+```{r lm-fev}
+fev %>%
+  summarize(cor(fev, height))
+
+# linear model: FEV vs height
+fev %>%
+  with(lm(fev ~ height))
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 3 & 4 with your group. 
+
+
+
+## FEV vs. centered height
+
+To estimate a more meaningful intercept, let's create a new height variable by subtracting the mean, so that the new "centered" height variable represents the mean height when `centeredheight` equals 0. Run the code chunk below to create the new `centeredheight` variable.
+
+```{r center-height}
+# create a new variable called centeredheight
+fev <- fev %>%
+  mutate(centeredheight = height - mean(height))
+```
+
+
+Let's see how this centering process impacts the relationship between `height` and `fev`:
+
+```{r plot-centeredheight}
+# Make a scatterplot using centered height
+fev %>% 
+  select(height,age,fev, centeredheight) %>%
+  ggpairs() + 
+  theme_minimal()
+
+# Compute the correlation between FEV and centered height
+fev %>%
+  summarize(cor(fev, centeredheight))
+
+fev %>%
+  with(lm(fev ~ centeredheight))
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 5 & 6 with your group. 
+
+
+
+Now, after you've predicted how centering will impact the linear model, let's check by fitting this new model. 
+
+```{r lm-fev-centered}
+# Fit linear model: FEV vs centeredheight
+fev %>%
+  ggplot(aes(x = centeredheight, y = fev)) +
+  geom_point() + 
+  geom_abline(intercept = 2.637, slope = 0.132, color = "Green")
+  labs(x = "Centered Height (in)", y = "FEV") +
+  theme_minimal()
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 with your group. 
+
+
+
+## FEV vs rescaled height
+
+Next, we'll consider changing the units of height to be in feet instead of inches. (*A similar transformation that we might try is to change to the metric system, but we'll stick with converting from inches to feet for now.*)
+
+First, complete this code to create a new `centeredheightft` variable which divides our `centeredheight` variable by 12 to convert it from inches to feet:
+
+```{r height-feet}
+# create a new variable called centeredheightft
+fev <- fev %>%
+  mutate(centeredheightft = centeredheight / 12)
+```
+
+
+Next, plot the new `centeredheightft` variable versus FEV and calculate the correlation:
+
+```{r plot-centeredheightft}
+# Make a scatterplot using centered height in feet
+
+
+# Compute the correlation between FEV and centered height in feet
+
+```
+
+Now, we'll use this new variable in a third regression model: 
+
+```{r lm-fev-centered-ft}
+# Fit linear model: FEV vs centeredheightft
+
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 8 with your group. 
+
+
+
+
+# Wrapping Up
+
+At the end of class (or after you've finished working through the questions above, whichever comes first), turn this .Rmd file into a nicely formatted .pdf as practice for your weekly assignments. To do this, follow these steps: `Knit` (to HTML) > `Open in Browser` > `Print` > `Save as PDF`. 
+
+
+

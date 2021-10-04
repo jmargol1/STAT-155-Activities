@@ -1,0 +1,167 @@
+---
+title: "Activity 21: Hypothesis Testing"
+author: "Your Name"
+date: "December 7, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity21.Rmd` and `fev.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity21.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+# Part 1: loading packages and data
+
+## Load packages
+
+As always, we start by loading all the packages that we'll need. *Add `message = FALSE` on the first line of your code chunk to hide all the messages that get printed out when you load packages.*
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(broom) 
+```
+
+
+## Data context
+
+Today we're going to return to our FEV data from the beginning of the semester. Recall that these data include information for a total of 654 children, ages 3--19. Each row in the dataset corresponds to a single child's visit to a doctor's clinic. Variables collected include:
+
+- `age`: age (years)
+- `fev`: forced expiratory volume (FEV) (liters per second); a measure of lung function
+- `height`: height (inches)
+- `sex`: binary sex (male/female)
+- `smoke`: smoking status (smoker/nonsmoker) 
+
+
+## Load data
+
+Download `fev.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R and then look at the data to remind yourself what it looks like. *Add `message = FALSE` on the first line of your code chunk if you want to hide the message that gets printed out when you load data.*
+
+```{r load-data}
+smoking <- read_csv('fev.csv')
+```
+
+
+# Part 2: hypothesis testing 
+
+Our scientific question of interest is: *does smoking decrease lung function in children?*
+
+We'll perform a hypothesis test to answer this question. Remember the general hypothesis testing procedure from the *Stat 155 Notes*:
+
+1. State hypotheses $H_0$ and $H_A$
+2. Select a significance threshold $\alpha$ 
+3. Calculate a test statistic $t_{obs} = \frac{estimate - null}{std \ error}$
+4. Calculate the corresponding p-value $p = P(|T| \ge |t_{obs}| \mid H_0 \text{ is true})$
+5. Make a decision  
+    - If p-value $\le \alpha$, we reject $H_0$ in favor of $H_A$  
+    - If p-value $> \alpha$, we fail to reject $H_0$ (remember that jurors' decisions are "guilty" and "not guilty", not "guilty" and "innocent")
+    
+Let's walk through these steps for the FEV data, assuming that we're answering this question using the simple linear regression model 
+
+$$E[\text{FEV} \mid \text{smoke}] = \beta_0 + \beta_1 \text{smokesmoker}$$
+
+## Steps 1 and 2: Hypotheses and Significance Threshold
+
+We complete steps 1 and 2 before we look at our data.
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 1 & 2 with your group.
+
+
+
+## Step 3: Test Statistic
+
+Now, fit the linear regression model to our data. Save this model so you can use it later (e.g., `mod <- fev %>% with(lm(...))`), then look at the model summary.
+
+```{r lm}
+mod1 <- smoking %>% with(lm(fev ~ smoke))
+
+summary(mod1)
+
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 3 - 5 with your group.
+
+
+
+## Step 4: P-Value
+
+Assuming that the null hypothesis is true, it turns out that our test statistic has a sampling distribution that is a bell curve centered around 0. We'll use this information to calculate our p-value: the probability of seeing a test statistic as or more extreme than the one we observed in our data, assuming that the null hypothesis is true. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 6 & 7 with your group.
+
+
+
+## Step 5: Decision
+
+Based on all of the above evidence, we can now make a decision about the hypotheses.
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 8 & 9 with your group.
+
+
+
+
+# Part 3: another type of hypothesis test
+
+It turns out there are multiple types of hypothesis tests that we could perform to answer our scientific question of interest: *does smoking decrease lung function in children?* 
+
+In Part 2, we used linear regression and tested whether the smoker coefficient was equal to zero. Another commonly used test for this type of question is called a *t-test*. You may have seen this in other classes. Let's use a t-test to answer our scientific question...
+
+
+## Step 1: Hypotheses
+
+Our null and alternative hypotheses when we use a t-test are 
+
+$$H_0: \mu_{smoker}  = \mu_{nonsmoker}$$  
+
+$$H_A: \mu_{smoker} \neq \mu_{nonsmoker},$$ 
+
+where $\mu_{group}$ represents the mean/average FEV for a given group. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 10 with your group.
+
+    
+## Step 2: Significance Threshold
+
+For comparison, use the same significance threshold for this hypothesis test as you did in Part 2. 
+    
+
+## Steps 3 and 4: Test Statistic and P-Value
+
+We'll use the `t.test` function in R to get the test statistic and p-value for this t-test. Update the code below with the correct outcome variable (Y), the variable defining the groups we're comparing (X), and the name of your dataset (DATA). Find the test statistic (`t`) and p-value.
+
+```{r ttest}
+t.test(fev ~ smoke, data = smoking)
+```
+
+
+## Step 5: Decision
+
+Based on all of the above evidence, we can now make a decision about the hypotheses.
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 11 & 12 with your group.

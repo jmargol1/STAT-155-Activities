@@ -1,0 +1,196 @@
+---
+title: "Activity 15: Even More Logistic Regression"
+author: "Your Name"
+date: "November 24, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity15.Rmd` and `voting18.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity15.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+
+# Loading Packages and Data
+
+## Loading packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(ggmosaic)
+library(broom)
+```
+
+
+## Data context
+
+In this activity, we'll use the `voting18.csv` dataset, which comes from the VOTER (Views of the Electorate Research) Survey from 2018. The data collection was conducted in partnership with the survey firm YouGov. In total, 6,005 adults (ages 18 and up) with internet access took the survey online between April 5 and May 14, 2018.  The goal of the research group is to have more productive conversations where voters feel like they are truly heard. They hope the study group's research and analysis helps us understand each other and make our democracy more functional. A number of variables were collected on each adult, including:
+
+- `turnout16_2016`: did the participant vote in the 2016 U.S. Election? (1 = yes, 2 = no)
+- `wealth_2016`: participant's thoughts on the distribution of money and wealth in the U.S (1 = distribution is fair, 2 = should be more evenly distributed, 8 = don't know)
+- `birthyr_2018`: participant's year of birth
+
+
+Today, we'll use these data to investigate whether the birth year/age of the voters was associated with whether or not they voted in 2016. 
+
+
+## Loading the data
+
+Download `voting18.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-data}
+voters <- read_csv('voting18.csv')
+```
+
+
+Look at the first six rows and/or type `View(voters)` in the Console to remind yourself what the data look like.
+
+```{r look-at-data}
+head(voters)
+```
+
+
+
+# Part 1: transform variables
+
+Before we fit any logistic regression models, we're going to transform some of our existing variables and create one new variable. Run the code chunk below.
+
+```{r transform-variables}
+voters <- voters %>%
+  mutate(turnout16_2016 = ifelse(turnout16_2016 == 1, 1, 0),
+         wealth_2016 = case_when(wealth_2016 == 1 ~ "Fair", 
+                                 wealth_2016 == 2 ~ "Not Fair", 
+                                 wealth_2016 == 8 ~ "Do not know"), 
+         age = (2016 - birthyr_2018),
+         agefrom18 = age - 18)
+```
+
+Then, look at (i.e., `View`) the voters dataset to see the new variables you just created. 
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 1-3 with your group.
+
+
+
+# Part 2: multiple logistic regression
+
+In Activity 13, we fit the simple logistic regression model:
+
+$$\log(Odds[turnout = 1 \mid wealth]) = \beta_0 + \beta_1 wealthFair + \beta_2 wealthNotFair$$
+
+Today, we'll add age to this model.
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 4 with your group.
+
+
+
+## Fit model
+
+Update the code below to fit a multiple logistic regression model with `turnout16_2016` as the outcome and `wealth_2016` and `agefrom18` as explanatory variables.
+
+```{r multiple-logistic-model}
+# fit model
+mod1 <- voters %>%
+  with(glm(??? ~ ???, family = ???))
+```
+
+
+## Interpret the model coefficients
+
+The code chunk below contains two different sets of commands, both of which we can use to get the exponentiated coefficient estimates from `mod1`. Run the code chunk and compare the output. 
+
+```{r multiple-logistic-coefficients}
+# get coefficient estimates and then exponentiate them
+mod1 %>%
+  coef() %>%
+  exp()
+
+# another way to get exponentiated coefficient estimates
+tidy(mod1) %>%
+  select(term, estimate) %>%
+  mutate(estimate_exp = exp(estimate))
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 5-6 with your group.
+
+
+
+# Part 3: evaluating a logistic regression model
+
+## Calculating predicted probabilities of voting
+
+We can use our logistic regression model to predict, for each individual in our dataset, their probability of voting in the 2016 US presidential election based on their age and beliefs about the distribution of wealth in the US. 
+
+To start, let's use the `augment` function to get these predicted probabilities for each person in the dataset, and then we'll create a boxplot of those predicted probabilities so we can see what they look like. 
+
+```{r plot-logistic-predictions}
+mod1 %>%
+  augment(type.predict = 'response') %>%
+  ggplot(aes(y = .fitted)) + 
+  geom_boxplot() +
+  ylab('Predicted Probability of Voting in 2016') +
+  theme_classic()
+```
+
+
+## Comparing predicted probabilities of voting to actual outcome
+
+For the people in our dataset, we actually know whether or not they voted. Let's compare our model's predictions to the truth by creating a boxplot of predicted probabilities for people who actually voted versus people who actually did not vote. 
+
+```{r plot-predictions-vs-actual}
+mod1 %>%
+  augment(type.predict = 'response') %>%
+  ggplot(aes(y = .fitted, x = factor(turnout16_2016))) + 
+  geom_boxplot() + 
+  ylab('Predicted Probability of Voting in 2016') + 
+  xlab('Actual Voter Turnout in 2016 (1 = voted, 0 = did not vote)') + 
+  theme_classic()
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 with your group.
+
+
+There are times in which you need to go beyond the predicted probabilities from our model and try to classify individuals into one of the two binary outcomes. How high of a predicted probability would we need from our model in order to be convinced that the person actually voted? Let's try a threshold of 0.95: if our model's predicted probability of voting is equal or above 0.95, we'll predict they voted; if the predicted probability of voting is below 0.95, we'll predict they didn't vote.
+
+```{r logistic-threshold}
+threshold <- 0.95
+  
+mod1 %>%
+  augment(type.predict = 'response') %>%
+  mutate(predictVote = .fitted >= threshold) %>%
+  count(turnout16_2016, predictVote)
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer the remaining questions with your group.
+
+

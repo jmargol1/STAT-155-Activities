@@ -1,0 +1,261 @@
+---
+title: "Activity 19: Confidence Intervals"
+author: "Your Name"
+date: "December 2, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity19.Rmd` and `bikeshare.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity19.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+
+# Part 1: loading packages and data
+
+## Load packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(broom) 
+library(mosaic) # for bootstrapping
+library(gsheet) # for reading data from Google Sheet
+```
+
+
+
+## Data context
+
+In this activity, we'll look at data on rental bike usage in Washington DC. We have information on daily rental bike usage for two years (731 days). Available variables include:  
+
+- `date`: date in format YYYY-MM-DD
+- `season`: winter, spring, summer, fall
+- `year`: 2011 or 2012
+- `month`: 3-letter month abbreviation
+- `day_of_week`: 3-letter abbreviation for day of week
+- `weekend`: TRUE if the case is a weekend, FALSE otherwise
+- `holiday`: is the day a holiday? (yes or no)
+- `temp_actual`: temperature in degrees Fahrenheit
+- `temp_feel`: what the temperature *feels* like in degrees Fahrenheit
+- `humidity`: proportion from 0 to 1 giving the humidity level
+- `windspeed`: wind speed in miles per hour
+- `weather_cat`: `categ1` = clear to partly cloudy, `categ2` = mist plus some clouds, `categ3` = light precipitation to thunderstorms
+- `riders_casual`: count of daily rides by casual (non-registered) users
+- `riders_registered`: count of daily rides by registered users
+- `riders_total`: count of total daily rides (`riders_casual + riders_registered`)
+
+
+
+## Load data
+
+Download `bikeshare.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-data, message = FALSE}
+bikes.all <- read_csv('bikeshare.csv')
+```
+
+
+
+
+# Part 2: sample from the population
+
+Let's suppose that the two years of bike share data contained in `bikeshare.csv` is our population of interest. You will each take a random sample of 150 days from the two years of bike share data. Since the `sample_n` function is random, we will all end up with slightly different samples.
+
+```{r sample-data}
+bikes.sample <- bikes.all %>%
+  sample_n(size = 150) ## take random sample of size 150 from bikes.all population
+```
+
+
+
+Check that your sample dataset now only has 150 rows. 
+
+```{r check-dimensions}
+nrow(bikes.sample)
+```
+
+
+
+# Part 3: classical confidence intervals
+
+Today we will continue investigating the research question: is casual bike ridership lower on days that are windier? 
+
+
+Fit a linear regression model to your **sample** data (`bikes.sample`), where the outcome is the number of daily rides by casual (non-registered) users (`riders_casual`) and the explanatory variable is the wind speed (`windspeed`).
+
+```{r linear-regression}
+mod1 <- bikes.sample %>% 
+  with(lm(riders_casual ~ windspeed))
+
+```
+
+
+Calculate the standard error for the `Intercept` and `windspeed` coefficients using the classical/theoretical approach.
+
+```{r standard-error}
+tidy(mod1)
+```
+
+
+Using the estimates and standard errors that you got above, construct 95% confidence intervals for the `Intercept` and `windspeed` coefficients. 
+
+```{r confint-by-hand}
+ConfIntLow = 836.369753 - 2 * 130.92114	
+ConfIntUp = 836.369753 + 2 * 130.92114	
+ConfWindLow = -5.231634	- 2 * 10.39342	
+ConfWindUp = -5.231634	+ 2 * 10.39342
+ConfIntLow
+ConfIntUp
+ConfWindLow
+ConfWindUp
+## lower bound = estimate - 2 * standard error
+## upper bound = estimate + 2 * standard error
+```
+
+
+Now, use the `confint` function to get 95% confidence intervals for the `Intercept` and `windspeed` coefficients instead of calculating them by hand. Read the help page for the `confint` function (type `?confint` in the Console) if you don't remember how to use this function.
+
+```{r confint-by-confint}
+mod1 %>% 
+  confint()
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 1-5 with your group.
+
+
+
+
+# Part 4: bootstrap confidence intervals
+
+We can also use bootstrapping to construct 95% confidence intervals for our regression coefficients.
+
+Edit and then run the code chunk below to re-sample from your dataset 500 times, fit the same linear regression model, and record the coefficient estimates from each new sample.
+
+```{r bootstrap}
+# 500 bootstrap samples
+boot.bikes.sample <- mosaic::do(500)*( # REPLACE ... with number of bootstrap samples 
+  bikes.sample %>%
+    sample_frac(replace = TRUE) %>%
+    with(lm(riders_casual ~ windspeed)) # REPLACE ... with variable names to fit your linear regression model from above
+)
+
+# look at bootstrap estimates
+head(boot.bikes.sample) # REPLACE ... with name of data frame storing bootstrap estimates
+```
+
+
+Then complete the code below to get a 95% bootstrap percentile confidence interval for the windspeed slope coefficient.
+
+```{r bootstrap-SE}
+# REPLACE the ...'s below with the appropriate number between 0 and 1
+boot.bikes.sample %>%
+  summarize(lb = quantile(windspeed, 0.025), ub = quantile(windspeed, 0.975))
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 6 & 7 with your group.
+
+
+
+
+# Part 5: confidence interval coverage
+
+Let's compare the confidence intervals that everyone got based on their different samples. First, run the code chunk below to read in everyone's results and clean up the data. (If this data cleaning process interests you, consider taking STAT 112: Introduction to Data Science!)
+
+```{r read-and-clean}
+# Read in results from google form responses
+results <- gsheet2tbl('https://docs.google.com/spreadsheets/d/1G4WEHDwaS2cru2kqyyAlL-nF1FY2qNbaANfgqfrh6bI/edit#gid=275278009')
+
+# Look at results
+head(results)
+
+# Give columns shorter names
+names(results) <- c('Timestamp', 'LB_Int', 'UB_Int', 'LB_Slope', 'UB_Slope')
+head(results)
+
+# Swap endpoints in case they were entered in wrong order
+results <- results %>% 
+  mutate(
+    new_LB_Int = pmin(LB_Int, UB_Int),
+    new_UB_Int = pmax(LB_Int, UB_Int),
+    new_LB_Slope = pmin(LB_Slope, UB_Slope),
+    new_UB_Slope = pmax(LB_Slope, UB_Slope)
+  )
+
+# Create variables indicating confidence interval coverage
+beta <- coef(lm(riders_casual ~ windspeed, data = bikes.all))
+
+results <- results %>%
+  mutate(IntCover = if_else(beta[1] <= new_UB_Int & beta[1] >= new_LB_Int, 'Yes', 'No')) %>% # check if population intercept beta0 in interval
+  mutate(SlopeCover = if_else(beta[2] <= new_UB_Slope & beta[2] >= new_LB_Slope, 'Yes', 'No')) #check if population slope beta1 in interval
+```
+
+
+Then, run the code below to plot everyone's confidence intervals:
+
+```{r visualize-intervals}
+# plot all CIs for intercept
+results %>%
+  ggplot(aes(x = Timestamp)) + 
+  geom_segment(aes(xend = Timestamp, y = LB_Int, yend = UB_Int, color = IntCover)) +
+  xlab('Data set') + 
+  ylab('Intercept \n(avg riders on days w/o wind)') + 
+  #ylim(0, 7000)+
+  geom_hline(yintercept = beta[1], linetype = 2) +
+  scale_color_manual('Population Parameter Covered', values = c('darkred','lightgreen'), limits = c('No','Yes')) + 
+  ggtitle('CIs for intercept') + 
+  theme(axis.text.x = element_text(angle = 90))
+
+results %>%
+  count(IntCover) %>%
+  mutate(prop = n/sum(n))
+
+# plot all CIs for slope
+results %>%
+  ggplot(aes(x = Timestamp)) + 
+  geom_segment(aes(xend = Timestamp, y = LB_Slope, yend = UB_Slope, color = SlopeCover)) +
+  xlab('Data set') + 
+  ylab('Windspeed Coefficient \n(change in avg riders assoc w/ 1mph incr in wind)') +
+  #ylim(-300,100) + 
+  geom_hline(yintercept = beta[2], linetype = 2) +
+    scale_color_manual('Population Parameter Covered', values = c('darkred','lightgreen'), limits = c('No','Yes')) + 
+  ggtitle('CIs for windspeed coefficient') + 
+  theme(axis.text.x = element_text(angle = 90))
+
+results %>%
+  count(SlopeCover) %>%
+  mutate(prop = n/sum(n))
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer the remaining questions with your group.
+
+
+

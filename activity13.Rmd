@@ -1,0 +1,173 @@
+---
+title: "Activity 13: Binary Outcomes"
+author: "Your Name"
+date: "November 19, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+# knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity13.Rmd` and `voting18.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together). 
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity13.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+
+# Loading Packages and Data
+
+## Loading packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(ggmosaic)
+library(broom)
+```
+
+
+## Data context
+
+In this activity, we'll use the `voting18.csv` dataset, which comes from the VOTER (Views of the Electorate Research) Survey from 2018. The data collection was conducted in partnership with the survey firm YouGov. In total, 6,005 adults (ages 18 and up) with internet access took the survey online between April 5 and May 14, 2018.  The goal of the research group is to have more productive conversations where voters feel like they are truly heard. They hope the study group's research and analysis helps us understand each other and make our democracy more functional. A number of variables were collected on each adult, including:
+
+- `turnout16_2016`: did the participant vote in the 2016 U.S. Election? (1 = yes, 2 = no)
+- `wealth_2016`: participant's thoughts on the distribution of money and wealth in the U.S (1 = distribution is fair, 2 = should be more evenly distributed, 8 = don't know)
+
+Today, we'll use these data to investigate whether the beliefs of the voters about the wealth distribution were associated with whether or not they voted in 2016. 
+
+## Loading the data
+
+Download `voting18.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-data}
+voters <- read_csv('voting18.csv')
+```
+
+
+Look at the first six rows and/or type `View(voters)` in the Console to familiarize yourself with what the data look like.
+
+```{r look-at-data}
+head(voters)
+```
+
+
+
+# Part 1: summarizing the relationship between wealth_2016 and turnout16_2016
+
+To start, we'll explore whether people who have certain beliefs about the distribution of wealth in the US are more likely to have voted in 2016. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 1 & 2 with your group.
+
+
+## Graphical summary
+
+We'll create a mosaic plot to visually compare voting turnout and beliefs. Update the code below to add more informative labels to the x-axis, y-axis, and color legend. 
+
+```{r graphical-summary}
+# recode the wealth_2016 variable so it has more informative labels
+# (don't need to change anything here, just run it)
+voters <- voters %>%
+  mutate(wealth_2016 = recode(wealth_2016, `1` = 'Fair', `2` = 'Not Fair', `8` = 'Do not know'))
+
+# create mosaic plot
+# (replace 'Insert Label Here' with more informative labels)
+voters %>%
+  filter(!is.na(turnout16_2016)) %>% # remove people missing turnout
+  filter(!is.na(wealth_2016)) %>% # remove people missing wealth beliefs
+  ggplot() + 
+  geom_mosaic(aes(x = product(turnout16_2016, wealth_2016), fill = turnout16_2016)) +
+  scale_fill_manual('1 = Voted, 2 = Did not Vote', values = c('lightblue', 'steelblue')) + 
+  labs(x = 'Beliefs on Wealth Distribution', y = 'Possible Voters')
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 3 with your group.
+
+
+## Numerical summary
+
+When we are comparing two categorical variables, a useful numerical summary that we can provide to accompany a visualization like the one we created above is to calculate the number of cases that fall into each pair of categories. We can do this using the `count` function in R. These counts can then be used to compare frequencies (counts) or relative frequencies (proportions) in different categories.
+
+```{r numerical-summary}
+voters %>%
+  count(turnout16_2016, wealth_2016)
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 4-6 with your group.
+
+
+# Part 2: modeling the relationship between voting & economic beliefs
+
+## Linear regression model
+
+Before we can fit a regression model looking at the relationship between voting & economic beliefs, we need to transform the `turnout16_2016` into an indicator variable that equals 1 if the participant voted in 2016 and 0 if they did not (right now it equals 1 if they voted and 2 if they did not vote). Run this code to update the `turnout16_2016` variable:
+
+```{r create-indicator}
+# recode the turnout16_2016 variable so it's 1/0 instead of 1/2 
+voters <- voters %>%
+  mutate(turnout16_2016 = ifelse(turnout16_2016 == 1, 1, 0))
+```
+
+
+Then, enter code below to fit a linear regression model with `turnout16_2016` as the outcome and `wealth_2016` as the predictor.
+
+```{r linear-model}
+mod <- lm(turnout16_2016 ~ wealth_2016, data = voters)
+summary(mod)
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 & 8 with your group.
+
+
+## Logistic regression model
+
+Next, we'll try fitting a *logistic* regression model to these data instead of a linear regression model. Before you fit this model...
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 9 with your group.
+
+
+When we fit a logistic regression model to these data, we will be modeling the log odds of voting as a function of economic beliefs:
+
+$$\log(Odds[turnout16\_2016 = 1 \mid wealth\_2016]) = \beta_0 + \beta_1 wealth\_2016Fair + \beta_1 wealth\_2016Not\;Fair$$
+
+We fit this model to our data using the `glm` function in R:
+
+```{r logistic-model}
+# fit mod2
+mod2 <- voters %>%
+  with(glm(turnout16_2016 ~ wealth_2016, family = binomial))
+
+# print out tidy summary of mod2
+tidy(mod2) %>%
+  select(term, estimate) %>%
+  mutate(estimate_exp = exp(estimate))
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer the remaining questions with your group.
+
+

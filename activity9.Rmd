@@ -1,0 +1,180 @@
+---
+title: "Activity 9: Multiple Linear Regression"
+author: "Your Name"
+date: "November 12, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.3) and RStudio (version 1.3.1093™): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity9.Rmd` and `housing.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+
+    - I **strongly** recommend that you save this file in a new folder dedicated to activities for this class, *not in your Downloads*.
+    - Double check that the file you downloaded does not have an extra `.txt` at the end of its name. 
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity9.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue. 
+
+
+
+# Part 1: Load Packages and Data
+
+## Loading packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(broom)
+```
+
+## Data context
+
+This data in `housing.csv` describe the sale of individual residential properties in Ames, Iowa from 2006 to 2010. The data set contains 2930 observations and a large number of both categorical and quantitative variables involved in assessing home values. 
+
+We will focus on three of these variables today:
+
+- `SalePrice`: the sale price, in U.S. dollars
+- `GrLivArea`: above grade (ground) living area, in square feet
+- `OverallQual`: the overall material and finish quality (1-poor, 10-high)
+
+## Loading the housing data
+
+Download `housing.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-housing-data}
+housing <- read_csv('housing.csv')
+```
+
+
+Look at the first six rows and/or type `View(housing)` in the Console to familiarize yourself with what the data look like.
+
+```{r look-at-housing-data}
+head(housing)
+```
+
+# Part 2: SalePrice v. GrLivArea
+
+To start, let's consider the relationship between the sale price (`SalePrice`) and the square footage of the house (`GrLivArea`).  
+
+## Summarize
+
+Let's create a scatterplot, and then calculate numerical summaries of the two variables individually, as well as calculate a measure of the strength of the linear relationship between them. 
+
+```{r summarize-price-vs-livarea}
+# create a plot
+housing %>%
+  ggplot(aes(x = GrLivArea, y = SalePrice)) +
+  geom_point() +
+  geom_smooth(se = FALSE, color = 'lightblue') +
+  geom_smooth(method='lm', se = FALSE, color = 'steelblue') +
+  theme_classic()
+
+# calculate numerical summaries
+housing %>%
+  summarize(mean(SalePrice), median(SalePrice), sd(SalePrice), # summarize SalePrice
+            mean(GrLivArea), median(GrLivArea), sd(GrLivArea), # summarize GrLivArea
+            cor(SalePrice, GrLivArea)) # summarize relationship between the two
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 1 & 2 with your group. 
+
+
+## Model 1
+
+We will focus our models on homes that are smaller than 3000 square feet. Let's start by fitting a simple linear regression model with sale price and living area. We'll save this model as `mod1` so we can use it later.
+
+```{r fit-mod1}
+# fit model
+mod1 <- housing %>% 
+  filter(GrLivArea < 3000) %>% # temporarily leave out the large houses 
+  with(lm(SalePrice ~ GrLivArea))
+
+# look at coefficient estimates
+mod1 %>%
+  coef()
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 3 & 4 with your group. 
+
+Now, evaluate this model by creating a residual plot and calculating the standard deviation of the residuals, as well as R-squared. 
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 5 & 6 with your group. 
+
+```{r eval-mod1}
+# insert code to create residual plot
+
+
+
+# look at r-squared and sigma (sd of residuals)
+glance(mod1)
+```
+
+## Model 2
+
+Let's also consider incorporating overall quality of the home into the model. First, let's create a visualization that adds to the scatterplot we created earlier, now coloring the points according to different categories of home quality.
+
+```{r viz-qual-cat}
+housing %>%
+  filter(GrLivArea < 3000) %>% # temporarily leave out the large houses
+  mutate(QualCat = cut(OverallQual,4)) %>% # create a temporary quality categories variable (just for this plot because we didn't reassign housing, i.e., no <-)
+  ggplot(aes(x = GrLivArea, y = SalePrice, color = QualCat)) + # color points by QualCat
+  geom_point() + 
+  geom_smooth(method = 'lm', se = FALSE) + # fit lines separately by QualCat
+  scale_color_viridis_d('Overall Quality\n(1-poor, 10-high)') + # colorblind friendly color palette
+  theme_classic()
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 with your group. 
+
+Now, let's fit (and evaluate) a model using both living area and a categorical version of overall home quality to predict home sale prices. 
+
+```{r fit-mod2}
+# fit model
+mod2 <- housing %>% 
+  filter(GrLivArea < 3000) %>% # leave out large houses
+  mutate(QualCat = cut(OverallQual,4)) %>% # create QualCat variable
+  with(lm(SalePrice ~ GrLivArea + QualCat))
+
+# look at coefficient estimates
+mod2 %>%
+  coef()
+
+# plot residuals versus fitted values
+mod2 %>%
+  augment() %>%
+  ggplot(aes(x = .fitted, y = .resid)) + 
+  geom_point() +
+  geom_smooth(se = FALSE) + 
+  geom_hline(yintercept = 0) +
+  theme_classic()
+
+# calculate model evaluation metrics
+glance(mod2)
+
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer the rest of the questions with your group. 
+

@@ -1,0 +1,144 @@
+---
+title: "Activity 20: Is the relationship real?"
+author: "Your Name"
+date: "December 3, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity20.Rmd` and `resume.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity20.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+
+# Part 1: loading packages and data
+
+## Load packages
+
+As always, we start by loading all the packages that we'll need. Note that we added `message = FALSE` on the first line of your code chunk to hide all the messages that get printed out when you load packages.
+
+```{r load-packages, message = FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(broom) 
+library(mosaic)
+```
+
+
+
+## Data context
+
+In this activity, we'll look at data from an experiment conducted in 2001-2002 that investigated the influence of race and gender on job applications. The researchers created realistic-looking resumes and then randomly assigned a name to the resume that "would communicate the applicant's gender and race" (e.g., they they assumed the name Emily would generally be interpreted as a white woman, whereas the name  Jamal would generally be interpreted as a black man).  They then submitted these resumes to job postings in Boston and Chicago and waited to see if the  applicant got a call back from the job posting. You can find a full description of the variables in this dataset [here](https://www.openintro.org/data/index.php?data=resume). To start, we'll focus on the following:
+
+- `received_callback`: indicator that the resume got a call back from the job posting
+- `firstname`: the first name used on the resume
+- `race`: inferred race associated with the first name on the resume
+- `gender`: inferred binary gender associated with the first name on the resume
+
+
+
+## Load data
+
+Download `resume.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R and then look at the data to familiarize yourself with what it looks like. Add `message = FALSE` on the first line of your code chunk if you want to hide the message that gets printed out when you load data.
+
+```{r load-data}
+resume <- read_csv('resume.csv')
+```
+
+
+
+
+
+# Part 2: logistic regression and confidence intervals
+
+We'll use logistic regression to investigate the effect of inferred race (`race`) and binary gender (`gender`) on the odds of getting a callback (`received_callback`).
+
+
+Fit this multiple logistic regression model in R using the `glm` function. Don't forget to specify `family = binomial`. 
+
+```{r multiple-logistic-model}
+mod1 <- resume %>%
+  with(glm(received_callback ~ race + gender, family = binomial))
+
+mod1 %>%
+  coef()
+
+expCoef <- mod1%>%
+  coef() %>%
+  exp()
+
+expCoef
+
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 1 & 2 with your group.
+
+
+
+Next, calculate 95% confidence intervals for the **exponentiated** coefficients.
+
+```{r confint}
+mod1%>%
+  confint()%>%
+  exp()
+  
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 3-5 with your group.
+
+
+
+
+# Part 3: logistic regression and hypothesis testing
+
+The model that you fit in Part 2 can be written as 
+
+$$\log(\text{Odds}[\text{Received Callback} \mid \text{race}, \text{gender}]) = \beta_0 + \beta_1 \text{raceWhite} + \beta_2 \text{genderMale}$$ 
+
+Suppose we wanted to know whether inferred binary gender has a real effect on resume call backs, after adjusting for race. We could answer this question by looking at the 95% confidence interval you created in Part 2, or by testing the hypotheses 
+
+$$H_0: \beta_2 = 0 \text{ vs } H_A: \beta_2 \neq 0,$$
+
+or, equivalently,
+
+$$H_0: e^{\beta_2} = 1 \text{ vs } H_A: e^{\beta_2} \neq 1.$$
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 6 with your group.
+
+
+
+Use the `tidy` function to get a clean version of the estimates from your fit logistic regression model. Look at the `p.value` column of the coefficient table. This column reports *p-values* for each of the coefficients in the model. 
+
+```{r model-summary}
+## your code here
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 7-10 with your group.
+
+
+

@@ -1,0 +1,182 @@
+---
+title: 'Activity 2: Exploring the Introductions Survey Data'
+author: 'Joe Margolis  '
+date: 'October 29, 2020'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+# Getting Started
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.3) and RStudio (version 1.3.1093): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity2.Rmd` and `introsurvey.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+  - I **strongly** recommend that you save this file in a new folder dedicated to activities for this class, *not in your Downloads*.
+  - Double check that the file you downloaded is called `activity2.Rmd`, not `activity2.Rmd.txt`. 
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity2.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document called `activity2.html`. Notice that this has also created a new file called `activity2.html` in the folder where you had originally saved `activity2.Rmd`. 
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue. 
+
+
+
+
+# Part 1: installing and loading R packages
+
+Throughout this activity we're going to be using some *functions* that live inside R *packages*. In order to use those functions, we first need to *install* (if we haven't already) and then *load* those packages.  
+
+1. Depending on how far you've made it in the lecture videos, you might have installed some of these packages already. Open the `Packages` panel (bottom right corner) to see the list of all packages that are already installed. Look to see if `readr`, `dplyr` and `ggplot2` are listed here. If they're on this list, that means they're already installed.
+
+2. If all three packages are already installed, skip to Step 3. If any packages are missing from this list, type `install.packages('packagename')` in the *Console*.
+
+3. Load all packages by running the following code chunk (press the green "play" button in the top right corner of the code chunk). You should now see a check mark next to each of these packages in the `Packages` panel.
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+Remember that *installing* a package is like purchasing a book: we only need to **do it once** in order to get it on our bookshelf. *Loading* a package, on the other hand, is like taking a book off the bookshelf and opening it: we need to do this for **every R session** in which we want to use the functions in the package.
+
+
+# Part 2: loading the Introductions Survey data
+
+Now that we've installed and loaded all the packages that we need, we're ready to read our data into R. We'll be exploring your responses to the *Stat 155 Introductions Survey* that you completed last class.
+
+Download the `introsurvey.csv` file from Moodle and save it in the same folder as this .Rmd file.  
+
+Then, read the data into R by running the following code chunk:
+
+```{r read-data}
+results <- read_csv('introsurvey.csv')
+```
+
+If this works successfully, you should see a new data frame called `results` show up in the `Environment` panel (top right corner of your screen). 
+
+If you get an error message here, remember these tips:
+
+- read the error message to see if it gives you a hint about where the error occurred
+- check your spelling, capitalization, punctuation, and order of operations
+- make sure you've saved your .Rmd file
+- check that the data set is stored in the same folder as this .Rmd file (or that you've correctly specified the entire path to the data file)
+- make sure you loaded all necessary packages
+- access the help page for the function you're trying to run (type `?functionname` into the Console) and/or copy and paste the error message into Google
+
+
+
+
+# Part 3: exploring the Introductions Survey data
+
+To explore these data, let's start by looking at the first six rows: 
+
+```{r look-at-data}
+head(results)
+```
+
+To see the entire data set, type `View(results)` in the Console. 
+
+The following commands are also useful for getting to know your data set. Run each one and add a comment to yourself describing what the function is doing.
+
+```{r explore-data}
+dim(results) # Gives number of rows and numver of columns
+nrow(results) # Gives the number of row in the data set
+ncol(results) # Gives the number of columns in the  data set
+names(results) # Gives row names in the data set
+```
+
+
+
+**STOP AND DISCUSS**: stop here to discuss and answer Questions 1--3 with your group.
+
+
+
+
+# Part 4: creating some numerical and visual summaries
+
+Next, let's create some initial numerical and visual summaries of these data. We'll improve upon these visualizations in Activity 3, but this will get things started.
+
+## Majors
+
+The *Stat 155 Introductions Survey* asked about your declared or intended major. Run the code chunk below to select just the column that lists what majors people in our class are working toward:
+
+```{r summarize-majors}
+results %>%
+  select(`What is your declared or intended major? (undecided is a totally acceptable answer!)`)
+```
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 4 with your group.
+
+
+
+## Birthdays
+
+The *Stat 155 Introductions Survey* asked about your birthday. Run the code chunk below to count up how many people in our class will or will not be celebrating a birthday during this Module.  
+
+```{r summarize-birthdays}
+results %>%
+  count(`When is your birthday?`)
+```
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 5 with your group. 
+
+
+
+## Enthusiasm
+
+
+The *Stat 155 Introductions Survey* asked about your enthusiasm for this course on a scale from 1 to 10. Run the code chunk below to create a bar plot, which visually summarizes how many people selected each number on the enthusiasm scale. 
+
+
+```{r summarize-enthusiasm}
+results %>%
+  ggplot(aes(x = `On a scale of 1-10, how excited are you about this class?`)) + 
+  geom_bar()
+```
+
+**STOP AND DISCUSS**: stop here to discuss and answer Question 6 with your group. 
+
+
+
+## Enthusiasm vs Coffee Drinking
+
+
+The *Stat 155 Introductions Survey* also asked how many cups of coffee you had to drink that morning. Let's see how this compares to how enthusiastic you are by calculating the average and median number of cups of coffee consumed by people at each level of enthusiasm:
+
+
+```{r summarize-enthusiasm-vs-coffee, message = FALSE}
+results %>%
+  group_by(`On a scale of 1-10, how excited are you about this class?`) %>%
+  summarize(avgCupsCoffee = mean(`How many cups of coffee did you drink this morning?`),
+            medCupsCoffee = median(`How many cups of coffee did you drink this morning?`))
+```
+
+**STOP AND DISCUSS**: stop here to discuss and answer the remaining Questions with your group. 
+
+
+
+
+# Part 5: create a PDF
+
+Congratulations on making it to the end of your first in-class activity in RStudio! Now that you're finished, it's time to `Knit` one more time to produce an HTML file with your final answers, and then create a PDF from that. For your weekly homework assignments we will ask you to submit a PDF rather than an HTML file (Moodle behaves better with PDFs), so although you will not be submitting this activity to Moodle you should still practice this process now.
+
+Here are the steps to create the final PDF: 
+
+1. Click `Knit` 
+2. A new  window will pop up with your nicely formatted HTML file. Double-check this file to make sure there aren't any error messages or formatting issues. If there are, go back to the .Rmd and fix any issues. 
+3. Once all issues are fixed, click `Open in Browswer` from your HTML file.
+4. `Print` the page that opens in your browser (e.g., right click and Print, Ctrl + P, ...)
+5. Instead of sending to a printer, select `Save as PDF`
+6. Save your new .pdf file (with an informative name; e.g., `activity2.pdf`) in the same folder where you put `activity2.Rmd`

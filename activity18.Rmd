@@ -1,0 +1,242 @@
+---
+title: "Activity 18: Quantifying Uncertainty"
+author: "Your Name"
+date: "December 1, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+#knitr::opts_chunk$set(eval = FALSE) # note for instructors: uncomment this code when creating a clean instructions version of the HTML; otherwise leave commented
+```
+
+
+# Getting Started
+
+**If you have RStudio running and you've downloaded the Rmd and csv files from Moodle, skip to Part 1.**
+
+Before you can work on this activity, you need access to RStudio. If you are struggling with any of the installation steps for R (version 4.0.2) and RStudio (version 1.3.1073): try using the [Macalester RStudio server](https://rstudio.macalester.edu) for this activity and then at the end of class today look at the *R and RStudio* section on Moodle and ask a group member and/or the instructor to troubleshoot the installation process.
+
+Once you have access to RStudio, you're ready to start working on this activity:
+
+1. Download `activity18.Rmd` and `bikeshare.csv` from Moodle and save them someplace on your computer that you can find again (the two files need to be in the same folder together).   
+  
+2. Open RStudio.
+
+3. Open your R Markdown file in RStudio: `File` > `Open File...` > find `activity18.Rmd` in your files. (If you're working on the Mac RStudio server, you need to upload the file first: go to the `Files` panel, then click `Upload`. Upload both the Rmd and the csv file.)
+
+4. Update the author on the third line of the file.
+
+5. Click the `Knit` button (look for the yarn and needle towards the top fo the screen). If successful, you should have a new window pop up with a nice looking HTML document. 
+
+
+**Ask for help** if you encounter issues on any of the steps above. Once you've successfully made it through these steps, you can continue.
+
+
+
+
+# Part 1: loading packages and data
+
+## Load packages
+
+As always, we start by loading all the packages that we'll need. 
+
+```{r load-packages}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(broom) 
+library(mosaic) # for bootstrapping; install.packages('mosaic') in Console if you get an error
+library(gsheet) # for reading data from a Google Sheet; install.packages('gsheet') in Console if you get an error
+```
+
+
+
+## Data context
+
+In this activity, we'll look at data on rental bike usage in Washington DC. We have information on daily rental bike usage for two years (731 days). Available variables include:  
+
+- `date`: date in format YYYY-MM-DD
+- `season`: winter, spring, summer, fall
+- `year`: 2011 or 2012
+- `month`: 3-letter month abbreviation
+- `day_of_week`: 3-letter abbreviation for day of week
+- `weekend`: TRUE if the case is a weekend, FALSE otherwise
+- `holiday`: is the day a holiday? (yes or no)
+- `temp_actual`: temperature in degrees Fahrenheit
+- `temp_feel`: what the temperature *feels* like in degrees Fahrenheit
+- `humidity`: proportion from 0 to 1 giving the humidity level
+- `windspeed`: wind speed in miles per hour
+- `weather_cat`: `categ1` = clear to partly cloudy, `categ2` = mist plus some clouds, `categ3` = light precipitation to thunderstorms
+- `riders_casual`: count of daily rides by casual (non-registered) users
+- `riders_registered`: count of daily rides by registered users
+- `riders_total`: count of total daily rides (`riders_casual + riders_registered`)
+
+
+
+## Load data
+
+Download `bikeshare.csv` from Moodle (if you haven't already) and make sure it's saved in the same folder as this .Rmd file. Load the dataset into R by running the following code chunk.
+
+```{r load-data, message = FALSE}
+bikes.all <- read_csv('bikeshare.csv')
+```
+
+Notice how we've adding `message = FALSE` to the first line of our code chunk. What does this do? Try removing this and running the code chunk again, and compare your results. 
+
+
+
+
+
+# Part 2: sample from the population
+
+Let's suppose that the two years of bike share data contained in `bikeshare.csv` is our population of interest. You will each take a random sample of 50 days from the two years of bike share data. Since the `sample_n` function is random, we will all end up with slightly different samples.
+
+```{r sample-data}
+bikes.sample <- bikes.all %>%
+  sample_n(size = 50) ## take random sample of size 50 from bikes.all population
+```
+
+
+
+Check that your sample dataset now only has 50 rows. 
+
+```{r check-dimensions}
+dim(bikes.sample)
+```
+
+
+
+# Part 3: linear regression
+
+Do you think casual bike ridership is lower on days that are windier? 
+
+Fit a linear regression model to your sample data, where the outcome is the number of daily rides by casual (non-registered) users (`riders_casual`) and the explanatory variable is the wind speed (`windspeed`). Make sure you fit this model to your **sample** data (`bikes.sample`).
+
+```{r linear-regression}
+## your code here
+
+
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 1-3 with your group.
+
+
+
+
+# Part 4: bootstrapping
+
+Bootstrapping is a powerful tool for understanding and quantifying how much our estimates would vary from sample to sample. 
+
+Run the code chunk below to re-sample from your dataset 500 times,  fit the same linear regression model, and record the coefficient estimates from each new sample.
+
+```{r bootstrap}
+# 500 bootstrap samples
+boot.data <- mosaic::do(500)*(
+  bikes.sample %>%
+    sample_frac(replace = TRUE) %>% # resample from sample with replacement
+    with(lm(riders_casual ~ windspeed)) # fit your linear regression model from above on new sample
+)
+
+# look at bootstrap estimates
+head(boot.data)
+```
+
+
+Then, run the code below to visualize the bootstrap sampling distribution for the intercept and slope coefficients.
+
+```{r bootstrap-sampling-distributions}
+# intercept
+boot.data %>%
+  ggplot(aes(x = Intercept)) + 
+  geom_histogram() + 
+  labs(x = 'Intercept Estimates', title = 'Bootstrap Sampling Distribution for Intercept')
+
+# slope
+boot.data %>%
+  ggplot(aes(x = windspeed)) + 
+  geom_histogram() + 
+  labs(x = 'Windspeed Slope Estimates', title = 'Bootstrap Sampling Distribution for Windspeed Slope')
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 4 with your group.
+
+
+
+Run the code below to calculate the standard deviation of the intercept and windspeed slope coefficient bootstrap estimates.
+
+```{r bootstrap-SE}
+boot.data %>%
+  summarize(sd(Intercept), sd(windspeed))
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Questions 5 & 6 with your group.
+
+
+Enter code below to estimate the standard error of the intercept and slope estimates using an alternate technique.
+
+```{r other-SE}
+# your code here
+
+```
+
+**STOP AND DISCUSS:** stop here to discuss and answer Question 7 with your group.
+
+
+
+
+# Part 5: visualizing sampling variation
+
+To understand sampling variation, ideally we would be like to re-sample from our population of interest and see how our estimates change. Usually, we don't have the ability to do this, so we use bootstrapping and theoretical results to understand sampling variation. 
+
+In this activity, we actually *do* have access to our population of interest: you sampled from it to get your `bikes.sample` dataset in Part 2. Due to the randomness involved in our sampling procedure, everyone in the class ended up with a different sample from this population. Let's compare the regression coefficient estimates that everyone got in their different samples.
+
+First, run the code chunk below to read in everyone's results from their random sample:
+
+```{r}
+# read in results from google form responses
+results <- gsheet2tbl('https://docs.google.com/spreadsheets/d/1Aszg3mdZbb4v7F55F18Xz06EDSEqEREH0l7Dg5Fp07I/edit#gid=2004939987')
+
+# look at results
+head(results)
+```
+
+Then, run the code below to plot everyone's fitted regression models:
+
+```{r}
+# plot all lines
+bikes.all %>%
+  ggplot(aes(x = windspeed, y = riders_casual)) + 
+  geom_point() + # scatterplot of population data
+  geom_abline(data = results, aes(intercept = `What is your estimated intercept?`, slope = `What is your estimated slope?`), color = 'grey') + # add fitted lines from each sample
+  geom_smooth(method='lm', se = FALSE) + 
+  theme_minimal() + # minimal theme
+  theme(legend.position = 'none') # remove color legend
+```
+
+
+Finally, run the code below to make histograms of everyone's slope and intercept estimates and calculate the standard deviation of the estimates:
+
+```{r}
+# histogram of intercept estimates (sampling distribution)
+results %>%
+  ggplot(aes(x = `What is your estimated intercept?`)) + 
+  geom_histogram() + # might want to change binwidth
+  labs(title = 'Intercept Estimates')
+
+# histogram of slope estimates (sampling distribution)
+results %>%
+  ggplot(aes(x = `What is your estimated slope?`)) + 
+  geom_histogram() + # might want to change binwidth 
+  labs(title = 'Slope Estimates')
+
+# standard deviation of estimates
+results %>%
+  select(-Timestamp) %>%
+  summarize_all(sd)
+```
+
+
+**STOP AND DISCUSS:** stop here to discuss and answer the remaining questions with your group.
+
